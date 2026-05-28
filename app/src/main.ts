@@ -239,8 +239,8 @@ class StateMasterControllerLogicHandlerBusiness {
         const deltaTime = now.since(this.lastTick).milliseconds / 1000;
 
         for (let i = 0; i < this.pieces.length; ++i) {
+            const piece0 = this.pieces[i];
             for (let j = i + 1; j < this.pieces.length; ++j) {
-                const piece0 = this.pieces[i];
                 const piece1 = this.pieces[j];
                 if (piece0 === piece1) throw new Error("unreachable");
                 if (!intersectsCircle(piece0, piece1)) continue;
@@ -256,6 +256,23 @@ class StateMasterControllerLogicHandlerBusiness {
                 const p1v = v2mul(direction, pointLength(piece1.velocity));
                 piece0.velocity = p0v;
                 piece0.velocity = p1v;
+            }
+
+            if (piece0.pos.y - piece0.radius < 0) {
+                piece0.pos.y = piece0.radius;
+                piece0.velocity.y = -piece0.velocity.y;
+            }
+            if (piece0.pos.y + piece0.radius > this.canvas.height) {
+                piece0.pos.y = this.canvas.height - piece0.radius;
+                piece0.velocity.y = -piece0.velocity.y;
+            }
+            if (piece0.pos.x - piece0.radius < 0) {
+                piece0.pos.x = piece0.radius;
+                piece0.velocity.x = -piece0.velocity.x;
+            }
+            if (piece0.pos.x + piece0.radius > this.canvas.width) {
+                piece0.pos.x = this.canvas.width - piece0.radius;
+                piece0.velocity.x = -piece0.velocity.x;
             }
         }
         for (const piece of this.pieces) {
