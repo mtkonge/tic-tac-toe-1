@@ -1,13 +1,9 @@
-type Player = "x" | "o";
-
 type V2 = { x: number; y: number };
 
 type Circle = { pos: V2; radius: number };
+type Piece = Circle & { velocity: V2 };
 
-type Cell = {
-    player: Player | null;
-};
-
+// deno-lint-ignore no-unused-vars
 function intersectsPoint(point: V2, circle: Circle): boolean {
     const dist = Math.sqrt(
         (point.x - circle.pos.x) ** 2 + (point.y - circle.pos.y) ** 2,
@@ -15,6 +11,7 @@ function intersectsPoint(point: V2, circle: Circle): boolean {
     return dist <= circle.radius;
 }
 
+// deno-lint-ignore no-unused-vars
 function intersectsCircle(a: Circle, b: Circle): boolean {
     const dist = Math.sqrt(
         (a.pos.x - b.pos.x) ** 2 + (a.pos.y - b.pos.y) ** 2,
@@ -36,12 +33,12 @@ function v2add(lhs: V2, rhs: V2) {
     return { x: lhs.x + rhs.x, y: lhs.y + rhs.y };
 }
 
+type Player = Circle & { aim: V2 | null };
+
 class StateMasterControllerLogicHandlerBusiness {
     private ctx: CanvasRenderingContext2D;
-    private player: Circle;
-    private velocity = { x: 0, y: 0 };
-    private shot = false;
-    private shootDelta: V2 | null = null;
+    private player: Player | null;
+    private pieces: Piece[] = [];
 
     private mousePos({ clientX, clientY }: MouseEvent): V2 {
         const x = this.canvas.getBoundingClientRect().left;
@@ -56,8 +53,12 @@ class StateMasterControllerLogicHandlerBusiness {
         return coords;
     }
 
-    private basePlayer() {
-        return { pos: { x: this.canvas.width / 2, y: 800 }, radius: 25 };
+    private basePlayer(): Player {
+        return {
+            pos: { x: this.canvas.width / 2, y: 800 },
+            radius: 25,
+            aim: null,
+        } satisfies Player;
     }
 
     constructor(private canvas: HTMLCanvasElement) {
@@ -66,70 +67,112 @@ class StateMasterControllerLogicHandlerBusiness {
 
         document.addEventListener("mouseup", () => this.shoot());
         document.addEventListener("mousedown", (ev) => {
+            if (this.player === null) return;
             const delta = v2sub(this.mousePos(ev), this.player.pos);
-            this.shootDelta = { x: -delta.x, y: -delta.y };
+            this.player.aim = { x: -delta.x, y: -delta.y };
         });
 
         document.addEventListener("mousemove", (ev) => {
-            if (!this.shootDelta) return;
+            if (this.player === null || this.player.aim === null) return;
             const delta = v2sub(this.mousePos(ev), this.player.pos);
-            this.shootDelta = { x: -delta.x, y: -delta.y };
+            this.player.aim = { x: -delta.x, y: -delta.y };
         });
 
         setInterval(() => {
             this.update();
             this.render();
         });
+
+        const renderCb = () => {
+            this.render();
+            requestAnimationFrame(renderCb);
+        };
+        requestAnimationFrame(renderCb);
     }
 
     private shoot() {
-        if (!this.shootDelta) return;
+        if (this.player === null || this.player.aim === null) return;
         const velocityModifier = 1.5;
 
         const calc = (x: number) =>
             (Math.abs(x) ** velocityModifier) * Math.sign(x);
 
-        this.velocity = {
-            x: calc(this.shootDelta.x),
-            y: calc(this.shootDelta.y),
-        };
-        this.shot = true;
-        this.shootDelta = null;
+        const piece = {
+            pos: this.player.pos,
+            radius: this.player.radius,
+            velocity: {
+                x: calc(this.player.aim.x),
+                y: calc(this.player.aim.y),
+            },
+        } satisfies Piece;
+        this.pieces.push(piece);
+        this.player = null;
     }
 
     private lastTick = Temporal.Now.instant();
     private update() {
         const now = Temporal.Now.instant();
         const deltaT = now.since(this.lastTick).milliseconds / 1000;
-        this.player.pos.x += this.velocity.x * deltaT;
-        this.player.pos.y += this.velocity.y * deltaT;
-        this.velocity.x *= 0.99;
-        this.velocity.y *= 0.99;
+
+        for (let i = 0; i < this.pieces.length; ++i) {
+            for (let j = i + 1; j < this.pieces.length; ++j) {
+                const piece0 = this.pieces[i];
+                const piece1 = this.pieces[j];
+                if (piece0 === piece1) throw new Error("unreachable");
+                if (!intersectsCircle(piece0, piece1)) continue;
+                console.log("intersection");
+
+                const p0v = piece0.velocity;
+                const p1v = piece1.velocity;
+                piece0.velocity = p1v;
+                piece1.velocity = p0v;
+            }
+        }
+        for (const piece of this.pieces) {
+            piece.pos.x += piece.velocity.x * deltaT;
+            piece.pos.y += piece.velocity.y * deltaT;
+            piece.velocity.x *= 1 - (2 * deltaT);
+            piece.velocity.y *= 1 - (2 * deltaT);
+        }
+        const piecesStoppedMoving = this.pieces.every((p) =>
+            Math.abs(p.velocity.x) + Math.abs(p.velocity.y) < 10
+        );
+        if (this.player === null && piecesStoppedMoving) {
+            for (const piece of this.pieces) {
+                piece.velocity = { x: 0, y: 0 };
+            }
+            this.player = this.basePlayer();
+        }
         this.lastTick = now;
     }
 
     private render() {
         this.ctx.fillStyle = "#ddd";
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        if (this.shootDelta !== null) {
-            this.ctx.strokeStyle = "red";
-            this.ctx.beginPath();
-            this.ctx.moveTo(this.player.pos.x, this.player.pos.y);
-            this.ctx.lineTo(
-                v2add(this.shootDelta, this.player.pos).x,
-                v2add(this.shootDelta, this.player.pos).y,
-            );
-            this.ctx.stroke();
+        if (this.player !== null) {
+            if (this.player.aim !== null) {
+                this.ctx.strokeStyle = "red";
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.player.pos.x, this.player.pos.y);
+                const aimAt = v2add(this.player.aim, this.player.pos);
+                this.ctx.lineTo(
+                    aimAt.x,
+                    aimAt.y,
+                );
+                this.ctx.stroke();
+            }
+            this.ctx.fillStyle = "#000";
+            renderCircle(this.player, this.ctx);
         }
-        this.ctx.fillStyle = "#000";
-
-        renderCircle(this.player, this.ctx);
+        for (const piece of this.pieces) {
+            this.ctx.fillStyle = "#000";
+            renderCircle(piece, this.ctx);
+        }
     }
 }
 
 function main() {
     const canvas = document.querySelector<HTMLCanvasElement>("#canvas")!;
-    const board: Cell[] = new Array(9).fill(0).map(() => ({ player: null }));
 
     new StateMasterControllerLogicHandlerBusiness(canvas);
 }
