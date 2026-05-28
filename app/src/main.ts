@@ -47,6 +47,7 @@ class StateMasterControllerLogicHandlerBusiness {
 
         document.addEventListener("mouseup", (ev) => {
             if (ev.button !== 0) return;
+            this.playHitSound();
             this.shoot();
         });
         document.addEventListener("mousedown", (ev) => {
@@ -113,6 +114,21 @@ class StateMasterControllerLogicHandlerBusiness {
         return coords;
     }
 
+    private swapPlayer() {
+        const id = this.player.tag === "player_aiming"
+            ? this.player.player
+            : this.player.previousPlayer;
+        switch (id) {
+            case 0:
+                this.player = this.createPlayer(1);
+                break;
+
+            case 1:
+                this.player = this.createPlayer(0);
+                break;
+        }
+    }
+
     private createPlayer(player: PlayerId): AimingPlayer {
         return {
             tag: "player_aiming",
@@ -120,6 +136,7 @@ class StateMasterControllerLogicHandlerBusiness {
             radius: 25,
             aim: null,
             player,
+            timer: 30,
         } satisfies AimingPlayer;
     }
 
@@ -151,7 +168,7 @@ class StateMasterControllerLogicHandlerBusiness {
     private lastTick = Temporal.Now.instant();
     private update() {
         const now = Temporal.Now.instant();
-        const deltaT = now.since(this.lastTick).milliseconds / 1000;
+        const deltaTime = now.since(this.lastTick).milliseconds / 1000;
 
         for (let i = 0; i < this.pieces.length; ++i) {
             for (let j = i + 1; j < this.pieces.length; ++j) {
@@ -159,6 +176,7 @@ class StateMasterControllerLogicHandlerBusiness {
                 const piece1 = this.pieces[j];
                 if (piece0 === piece1) throw new Error("unreachable");
                 if (!intersectsCircle(piece0, piece1)) continue;
+                this.playHitSound();
                 const p0v = piece0.velocity;
                 const p1v = piece1.velocity;
                 piece0.velocity = p1v;
@@ -166,26 +184,29 @@ class StateMasterControllerLogicHandlerBusiness {
             }
         }
         for (const piece of this.pieces) {
-            piece.pos.x += piece.velocity.x * deltaT;
-            piece.pos.y += piece.velocity.y * deltaT;
-            piece.velocity.x *= 1 - (2 * deltaT);
-            piece.velocity.y *= 1 - (2 * deltaT);
+            piece.pos.x += piece.velocity.x * deltaTime;
+            piece.pos.y += piece.velocity.y * deltaTime;
+            piece.velocity.x *= 1 - (2 * deltaTime);
+            piece.velocity.y *= 1 - (2 * deltaTime);
         }
         const piecesStoppedMoving = this.pieces.every((p) =>
             Math.abs(p.velocity.x) + Math.abs(p.velocity.y) < 10
         );
         if (this.player.tag === "player_has_shot" && piecesStoppedMoving) {
-            switch (this.player.previousPlayer) {
-                case 0:
-                    this.player = this.createPlayer(1);
-                    break;
-
-                case 1:
-                    this.player = this.createPlayer(0);
-                    break;
+            this.swapPlayer();
+        }
+        if (this.player.tag === "player_aiming") {
+            this.player.timer -= deltaTime;
+            if (this.player.timer < 0) {
+                this.swapPlayer();
             }
         }
         this.lastTick = now;
+    }
+
+    private playHitSound() {
+        const sound = new Audio("/pop.mp3");
+        sound.play();
     }
 
     private render() {
@@ -236,7 +257,9 @@ class StateMasterControllerLogicHandlerBusiness {
         }
         if (this.player.tag === "player_aiming") {
             if (this.player.aim !== null) {
-                this.ctx.strokeStyle = "red";
+                this.ctx.save();
+                this.ctx.lineWidth = 8;
+                this.ctx.strokeStyle = "#444";
                 this.ctx.beginPath();
                 this.ctx.moveTo(this.player.pos.x, this.player.pos.y);
                 const aimAt = v2add(this.player.aim, this.player.pos);
@@ -245,8 +268,20 @@ class StateMasterControllerLogicHandlerBusiness {
                     aimAt.y,
                 );
                 this.ctx.stroke();
+                this.ctx.restore();
             }
             this.renderCircle(this.player, this.ctx);
+
+            this.ctx.font = "32px monospace";
+            this.ctx.fillStyle = "#444";
+            const textSize = this.ctx.measureText(
+                this.player.timer.toFixed(2),
+            );
+            this.ctx.fillText(
+                this.player.timer.toFixed(2),
+                this.canvas.width / 2 - textSize.width / 2,
+                980,
+            );
         }
     }
 }
