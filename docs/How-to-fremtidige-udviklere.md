@@ -4,4 +4,5 @@
 
 Held og lykke
 
-![bajer](/app/static/groen.jpg)
+![bajer](/app/static/classic.jpg)
+
