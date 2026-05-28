@@ -2,11 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@luca/esbuild-deno-loader@~0.11.1": "0.11.1",
-<<<<<<< Updated upstream
-    "jsr:@std/assert@*": "1.0.19",
-=======
     "jsr:@std/assert@^1.0.19": "1.0.19",
->>>>>>> Stashed changes
     "jsr:@std/bytes@^1.0.2": "1.0.6",
     "jsr:@std/cli@^1.0.30": "1.0.30",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
@@ -71,9 +67,6 @@
         "jsr:@std/streams"
       ]
     },
-    "@std/internal@1.0.13": {
-      "integrity": "2f9546691d4ac2d32859c82dff284aaeac980ddeca38430d07941e7e288725c0"
-    },
     "@std/internal@1.0.14": {
       "integrity": "291516b3d4c35024d6ffbc0a9df5bf4c64116e05b50012cf846710152d2ffdf7"
     },
@@ -82,12 +75,6 @@
     },
     "@std/net@1.0.6": {
       "integrity": "110735f93e95bb9feb95790a8b1d1bf69ec0dc74f3f97a00a76ea5efea25500c"
-    },
-    "@std/path@1.1.4": {
-      "integrity": "1d2d43f39efb1b42f0b1882a25486647cb851481862dc7313390b2bb044314b5",
-      "dependencies": [
-        "jsr:@std/internal@^1.0.12"
-      ]
     },
     "@std/path@1.1.5": {
       "integrity": "ccea00982ea28c36becaf6e62f855406c76a8c32d462f66f415bbb7d83a271bc",
