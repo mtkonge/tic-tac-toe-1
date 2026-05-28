@@ -3,3 +3,5 @@
 ## Kodestruktur
 
 Held og lykke
+
+[bajer](/app/static/groen.jpg)
