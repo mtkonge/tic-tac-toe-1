@@ -1,41 +1,28 @@
-type V2 = { x: number; y: number };
+import {
+    AimingPlayer,
+    HasShotPlayer,
+    PlayerCircle,
+    PlayerId,
+    PlayerSquare,
+} from "./player.ts";
+import { availableSkins } from "./skins.ts";
+import {
+    intersectsCircle,
+    intersectsPoint,
+    intersectsSquare,
+    pointDist,
+    type V2,
+} from "./units.ts";
 
-type Circle = { pos: V2; radius: number; skin: string };
-type Piece = Circle & { velocity: V2 };
+type Piece = PlayerCircle & { velocity: V2 };
 
-function pointDist(lhs: V2, rhs: V2): number {
-    return Math.sqrt(
-        (lhs.x - rhs.x) ** 2 + (lhs.y - rhs.y) ** 2,
-    );
-}
+const skins = availableSkins();
 
-function intersectsPoint(point: V2, circle: Circle): boolean {
-    return pointDist(point, circle.pos) <= circle.radius;
-}
-
-function intersectsSquare(point: V2, square: { pos: V2; size: V2 }): boolean {
-    if (point.x < square.pos.x || point.x > square.pos.x + square.size.x) {
-        return false;
-    }
-    if (point.y < square.pos.y || point.y > square.pos.y + square.size.y) {
-        return false;
-    }
-    return true;
-}
-
-function intersectsCircle(a: Circle, b: Circle): boolean {
-    return pointDist(a.pos, b.pos) <= a.radius + b.radius;
-}
-
-function renderCircle(circle: Circle, ctx: CanvasRenderingContext2D) {
-    ctx.beginPath();
-    ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#444";
-    ctx.beginPath();
-    ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
-    ctx.stroke();
-}
+type Grid = {
+    width: number;
+    height: number;
+    unit: number;
+};
 
 function v2sub(lhs: V2, rhs: V2) {
     return { x: lhs.x - rhs.x, y: lhs.y - rhs.y };
@@ -45,19 +32,75 @@ function v2add(lhs: V2, rhs: V2) {
     return { x: lhs.x + rhs.x, y: lhs.y + rhs.y };
 }
 
-type Player = Circle & { aim: V2 | null };
-
-type Grid = {
-    width: number;
-    height: number;
-    unit: number;
-};
-
 class StateMasterControllerLogicHandlerBusiness {
     private ctx: CanvasRenderingContext2D;
     private grid: Grid = { unit: 80, width: 5, height: 5 };
-    private player: Player | null;
+    private player: AimingPlayer | HasShotPlayer;
     private pieces: Piece[] = [];
+
+    public selectedSkin = skins[0];
+
+    private renderCircle(circle: PlayerCircle, ctx: CanvasRenderingContext2D) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
+        ctx.clip();
+        const square = {
+            size: { x: circle.radius * 2, y: circle.radius * 2 },
+            pos: {
+                x: circle.pos.x - circle.radius,
+                y: circle.pos.y - circle.radius,
+            },
+            player: circle.player,
+        } satisfies PlayerSquare;
+        this.selectedSkin.render(square, ctx);
+        ctx.restore();
+        ctx.strokeStyle = "#444";
+        ctx.beginPath();
+        ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+
+    private buildGriddy() {}
+
+    constructor(private canvas: HTMLCanvasElement) {
+        this.ctx = canvas.getContext("2d")!;
+        this.player = this.createPlayer(0);
+        this.ctx.lineWidth = 2;
+
+        document.addEventListener("mouseup", (ev) => {
+            if (ev.button !== 0) return;
+            this.shoot();
+        });
+        document.addEventListener("mousedown", (ev) => {
+            if (ev.button !== 0) return;
+            if (this.player.tag === "player_has_shot") return;
+            if (!intersectsPoint(this.mousePos(ev), this.player)) return;
+            const delta = v2sub(this.mousePos(ev), this.player.pos);
+            this.player.aim = { x: -delta.x, y: -delta.y };
+        });
+
+        document.addEventListener("mousemove", (ev) => {
+            if (ev.button !== 0) return;
+            if (
+                this.player.tag !== "player_aiming" || this.player.aim === null
+            ) {
+                return;
+            }
+            const delta = v2sub(this.mousePos(ev), this.player.pos);
+            this.player.aim = { x: -delta.x, y: -delta.y };
+        });
+
+        setInterval(() => {
+            this.update();
+        });
+
+        const renderCb = () => {
+            this.render();
+            requestAnimationFrame(renderCb);
+        };
+        requestAnimationFrame(renderCb);
+    }
 
     private mousePos({ clientX, clientY }: MouseEvent): V2 {
         const x = this.canvas.getBoundingClientRect().left;
@@ -72,52 +115,20 @@ class StateMasterControllerLogicHandlerBusiness {
         return coords;
     }
 
-    private basePlayer(): Player {
+    private createPlayer(player: PlayerId): AimingPlayer {
         return {
+            tag: "player_aiming",
             pos: { x: this.canvas.width / 2, y: 850 },
             radius: 25,
             aim: null,
-            skin: "#77c",
-        } satisfies Player;
-    }
-
-    constructor(private canvas: HTMLCanvasElement) {
-        this.ctx = canvas.getContext("2d")!;
-        this.player = this.basePlayer();
-
-        document.addEventListener("mouseup", (ev) => {
-            if (ev.button !== 0) return;
-            this.shoot();
-        });
-        document.addEventListener("mousedown", (ev) => {
-            if (ev.button !== 0) return;
-            if (this.player === null) return;
-            if (!intersectsPoint(this.mousePos(ev), this.player)) return;
-            const delta = v2sub(this.mousePos(ev), this.player.pos);
-            this.player.aim = { x: -delta.x, y: -delta.y };
-        });
-
-        document.addEventListener("mousemove", (ev) => {
-            if (ev.button !== 0) return;
-            if (this.player === null || this.player.aim === null) return;
-            const delta = v2sub(this.mousePos(ev), this.player.pos);
-            this.player.aim = { x: -delta.x, y: -delta.y };
-        });
-
-        setInterval(() => {
-            this.update();
-            this.render();
-        });
-
-        const renderCb = () => {
-            this.render();
-            requestAnimationFrame(renderCb);
-        };
-        requestAnimationFrame(renderCb);
+            player,
+        } satisfies AimingPlayer;
     }
 
     private shoot() {
-        if (this.player === null || this.player.aim === null) return;
+        if (this.player.tag !== "player_aiming" || this.player.aim === null) {
+            return;
+        }
         const velocityModifier = 1.5;
 
         const calc = (x: number) =>
@@ -130,10 +141,13 @@ class StateMasterControllerLogicHandlerBusiness {
                 x: calc(this.player.aim.x),
                 y: calc(this.player.aim.y),
             },
-            skin: this.player.skin,
+            player: this.player.player,
         } satisfies Piece;
         this.pieces.push(piece);
-        this.player = null;
+        this.player = {
+            tag: "player_has_shot",
+            previousPlayer: this.player.player,
+        };
     }
 
     private lastTick = Temporal.Now.instant();
@@ -147,8 +161,6 @@ class StateMasterControllerLogicHandlerBusiness {
                 const piece1 = this.pieces[j];
                 if (piece0 === piece1) throw new Error("unreachable");
                 if (!intersectsCircle(piece0, piece1)) continue;
-                console.log("intersection");
-
                 const p0v = piece0.velocity;
                 const p1v = piece1.velocity;
                 piece0.velocity = p1v;
@@ -164,11 +176,16 @@ class StateMasterControllerLogicHandlerBusiness {
         const piecesStoppedMoving = this.pieces.every((p) =>
             Math.abs(p.velocity.x) + Math.abs(p.velocity.y) < 10
         );
-        if (this.player === null && piecesStoppedMoving) {
-            for (const piece of this.pieces) {
-                piece.velocity = { x: 0, y: 0 };
+        if (this.player.tag === "player_has_shot" && piecesStoppedMoving) {
+            switch (this.player.previousPlayer) {
+                case 0:
+                    this.player = this.createPlayer(1);
+                    break;
+
+                case 1:
+                    this.player = this.createPlayer(0);
+                    break;
             }
-            this.player = this.basePlayer();
         }
         this.lastTick = now;
     }
@@ -200,13 +217,11 @@ class StateMasterControllerLogicHandlerBusiness {
 
                 const winner = candidates.at(0);
                 if (winner !== undefined) {
-                    this.ctx.fillStyle = winner.skin;
-                    this.ctx.fillRect(
-                        x,
-                        y,
-                        this.grid.unit,
-                        this.grid.unit,
-                    );
+                    this.selectedSkin.render({
+                        pos: { x, y },
+                        size: { x: this.grid.unit, y: this.grid.unit },
+                        player: winner.player,
+                    }, this.ctx);
                 }
 
                 this.ctx.strokeStyle = "#444";
@@ -219,10 +234,9 @@ class StateMasterControllerLogicHandlerBusiness {
             }
         }
         for (const piece of this.pieces) {
-            this.ctx.fillStyle = piece.skin;
-            renderCircle(piece, this.ctx);
+            this.renderCircle(piece, this.ctx);
         }
-        if (this.player !== null) {
+        if (this.player.tag === "player_aiming") {
             if (this.player.aim !== null) {
                 this.ctx.strokeStyle = "red";
                 this.ctx.beginPath();
@@ -234,8 +248,7 @@ class StateMasterControllerLogicHandlerBusiness {
                 );
                 this.ctx.stroke();
             }
-            this.ctx.fillStyle = this.player.skin;
-            renderCircle(this.player, this.ctx);
+            this.renderCircle(this.player, this.ctx);
         }
     }
 }
