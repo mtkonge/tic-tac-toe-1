@@ -1,3 +1,5 @@
+import { PlayerId } from "./player.ts";
+
 export type BoardPiece = { player: 0 | 1 | null };
 
 export function initGrid(): BoardPiece[][] {
@@ -6,10 +8,12 @@ export function initGrid(): BoardPiece[][] {
     );
 }
 
-export type WinningResult = {
-    playerWon: 0 | 1 | null;
-    tie: boolean;
-};
+export type WinningResult =
+    | {
+        tag: "none";
+    }
+    | { tag: "tie" }
+    | { tag: "winner"; winner: PlayerId };
 
 export interface Board {
     hasWon(): WinningResult;
@@ -25,32 +29,10 @@ export class TicTacToeBoard implements Board {
         return 1;
     }
 
-    private occupiedSpacesByEachPlayer(
-        gridSize: number,
-    ): { player0: number; player1: number } {
-        const result = {
-            player0: 0,
-            player1: 0,
-        };
-        for (let row = 0; row < gridSize; row++) {
-            for (let col = 0; col < gridSize; col++) {
-                if (this.grid[row][col].player === null) {
-                    continue;
-                }
-                if (this.grid[row][col].player === 0) {
-                    result.player0++;
-                    continue;
-                }
-                result.player1++;
-            }
-        }
-        return result;
-    }
-
     hasWon(): WinningResult {
         const size = 5;
         const winLength = 3;
-        let result: WinningResult = { playerWon: null, tie: false };
+        let currentResult = { tag: "none" } as WinningResult;
 
         const directions = [
             [0, 1],
@@ -86,39 +68,21 @@ export class TicTacToeBoard implements Board {
                             }
                         }
 
+                        console.log(count);
                         if (count === winLength) {
                             if (
-                                result.playerWon ===
+                                currentResult.tag === "winner" &&
+                                currentResult.winner ===
                                     this.oppositePlayer(player)
                             ) {
-                                const totalCells = this
-                                    .occupiedSpacesByEachPlayer(size);
-                                if (totalCells.player0 > totalCells.player1) {
-                                    return {
-                                        playerWon: 0,
-                                        tie: false,
-                                    };
-                                }
-                                if (totalCells.player0 < totalCells.player1) {
-                                    return {
-                                        playerWon: 1,
-                                        tie: false,
-                                    };
-                                }
-                                return {
-                                    playerWon: null,
-                                    tie: true,
-                                };
+                                return { tag: "tie" };
                             }
-                            result = {
-                                playerWon: player,
-                                tie: false,
-                            };
+                            currentResult = { tag: "winner", winner: player };
                         }
                     }
                 }
             }
         }
-        return result;
+        return currentResult;
     }
 }

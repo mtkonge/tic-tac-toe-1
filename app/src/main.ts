@@ -1,3 +1,4 @@
+import { TicTacToeBoard } from "./Board.ts";
 import {
     AimingPlayer,
     HasShotPlayer,
@@ -201,7 +202,6 @@ class StateMasterControllerLogicHandlerBusiness {
             timer: 30,
         } satisfies AimingPlayer;
     }
-
     private shoot() {
         if (this.player.tag !== "player_aiming" || this.player.aim === null) {
             return;
@@ -266,9 +266,19 @@ class StateMasterControllerLogicHandlerBusiness {
             this.playHitSound();
             this.swapPlayer();
             const logicGrid = this.buildLogicGrid();
-            logicGrid;
-            if (Math.random() < 0.1) {
-                this.player = { tag: "player_has_won", winner: 0 };
+            const board = new TicTacToeBoard(
+                logicGrid.map((x) =>
+                    x
+                        .map((y) => y.tag === "unoccupied" ? null : y.player)
+                        .map((player) => ({ player }))
+                ),
+            );
+            const result = board.hasWon();
+            if (result.tag !== "none") {
+                this.player = {
+                    tag: "player_has_won",
+                    winner: result.tag === "winner" ? result.winner : null,
+                };
             }
         }
         if (this.player.tag === "player_aiming") {
@@ -350,8 +360,14 @@ class StateMasterControllerLogicHandlerBusiness {
             this.ctx.font = "32px monospace";
             const winner = this.player.winner;
             const loser: PlayerId = winner === 0 ? 1 : 0;
-            const text =
-                `Player #${winner} won! Most importantly, this means that player #${loser} lost!\nLoser.`;
+            let text;
+            if (winner !== null) {
+                text =
+                    `Player #${winner} won! Most importantly, this means that player #${loser} lost!\nLoser.`;
+            } else {
+                text =
+                    `Tie! Most importantly, this means that you both lost!\nLosers.`;
+            }
             const textSize = this.ctx.measureText(
                 text,
             );

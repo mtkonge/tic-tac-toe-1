@@ -9,7 +9,7 @@ Deno.test("top to bottom cross win condition", () => {
     grid[3][3] = { player: 1 };
 
     const board = new TicTacToeBoard(grid);
-    assertEquals(board.hasWon(), { playerWon: 1, tie: false });
+    assertEquals(board.hasWon(), { tag: "winner", winner: 1 });
 });
 
 Deno.test("bottom to top cross win condition", () => {
@@ -20,7 +20,7 @@ Deno.test("bottom to top cross win condition", () => {
     grid[1][3] = { player: 0 };
 
     const board = new TicTacToeBoard(grid);
-    assertEquals(board.hasWon(), { playerWon: 0, tie: false });
+    assertEquals(board.hasWon(), { tag: "winner", winner: 0 });
 });
 
 Deno.test("vertical win condition", () => {
@@ -31,7 +31,7 @@ Deno.test("vertical win condition", () => {
     grid[3][2] = { player: 0 };
 
     const board = new TicTacToeBoard(grid);
-    assertEquals(board.hasWon(), { playerWon: 0, tie: false });
+    assertEquals(board.hasWon(), { tag: "winner", winner: 0 });
 });
 
 Deno.test("horizontal win condition", () => {
@@ -42,7 +42,7 @@ Deno.test("horizontal win condition", () => {
     grid[3][2] = { player: 1 };
 
     const board = new TicTacToeBoard(grid);
-    assertEquals(board.hasWon(), { playerWon: 1, tie: false });
+    assertEquals(board.hasWon(), { tag: "winner", winner: 1 });
 });
 
 Deno.test("tie condition", () => {
@@ -58,7 +58,7 @@ Deno.test("tie condition", () => {
     grid[1][0] = { player: 0 };
 
     const board = new TicTacToeBoard(grid);
-    assertEquals(board.hasWon(), { playerWon: null, tie: true });
+    assertEquals(board.hasWon(), { tag: "tie" });
 });
 
 Deno.test("tie but win condition", () => {
@@ -73,5 +73,5 @@ Deno.test("tie but win condition", () => {
     grid[1][0] = { player: 0 };
 
     const board = new TicTacToeBoard(grid);
-    assertEquals(board.hasWon(), { playerWon: 0, tie: false });
+    assertEquals(board.hasWon(), { tag: "winner", winner: 0 });
 });
