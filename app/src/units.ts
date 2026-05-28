@@ -10,6 +10,17 @@ export function pointDist(lhs: V2, rhs: V2): number {
     );
 }
 
+export function pointUnit(v: V2): V2 {
+    const len = pointLength(v);
+    return { x: v.x / len, y: v.y / len };
+}
+
+export function pointLength(v: V2): number {
+    return Math.sqrt(
+        (v.x) ** 2 + (v.y) ** 2,
+    );
+}
+
 export function intersectsPoint(point: V2, circle: Circle): boolean {
     return pointDist(point, circle.pos) <= circle.radius;
 }

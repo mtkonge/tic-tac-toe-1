@@ -12,6 +12,8 @@ import {
     intersectsPoint,
     intersectsSquare,
     pointDist,
+    pointLength,
+    pointUnit,
     type V2,
 } from "./units.ts";
 
@@ -24,6 +26,10 @@ type Grid = {
     height: number;
     unit: number;
 };
+
+function v2mul(lhs: V2, rhs: number) {
+    return { x: lhs.x * rhs, y: lhs.y * rhs };
+}
 
 function v2sub(lhs: V2, rhs: V2) {
     return { x: lhs.x - rhs.x, y: lhs.y - rhs.y };
@@ -222,6 +228,7 @@ class StateMasterControllerLogicHandlerBusiness {
     }
 
     private lastTick = Temporal.Now.instant();
+    private hasPlayedSound = new Map<number, number>();
     private update() {
         const now = Temporal.Now.instant();
         const deltaTime = now.since(this.lastTick).milliseconds / 1000;
@@ -232,11 +239,18 @@ class StateMasterControllerLogicHandlerBusiness {
                 const piece1 = this.pieces[j];
                 if (piece0 === piece1) throw new Error("unreachable");
                 if (!intersectsCircle(piece0, piece1)) continue;
-                this.playHitSound();
-                const p0v = piece0.velocity;
-                const p1v = piece1.velocity;
+                if (!this.hasPlayedSound.has(i)) this.playHitSound();
+                const soundTimer = this.hasPlayedSound.get(i) ?? 0;
+                this.hasPlayedSound.set(i, soundTimer + deltaTime);
+                if (soundTimer > 1) {
+                    this.hasPlayedSound.set(i, 0);
+                }
+
+                const direction = pointUnit(v2sub(piece0.pos, piece1.pos));
+                const p0v = v2mul(direction, pointLength(piece0.velocity));
+                const p1v = v2mul(direction, pointLength(piece1.velocity));
+                piece0.velocity = p0v;
                 piece0.velocity = p1v;
-                piece1.velocity = p0v;
             }
         }
         for (const piece of this.pieces) {
