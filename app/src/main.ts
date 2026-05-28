@@ -63,8 +63,12 @@ class StateMasterControllerLogicHandlerBusiness {
         this.ctx = canvas.getContext("2d")!;
         this.player = this.basePlayer();
 
-        document.addEventListener("mouseup", () => this.shoot());
+        document.addEventListener("mouseup", (ev) => {
+            if (ev.button !== 0) return;
+            this.shoot();
+        });
         document.addEventListener("mousedown", (ev) => {
+            if (ev.button !== 0) return;
             if (this.player === null) return;
             if (!intersectsPoint(this.mousePos(ev), this.player)) return;
             const delta = v2sub(this.mousePos(ev), this.player.pos);
@@ -72,6 +76,7 @@ class StateMasterControllerLogicHandlerBusiness {
         });
 
         document.addEventListener("mousemove", (ev) => {
+            if (ev.button !== 0) return;
             if (this.player === null || this.player.aim === null) return;
             const delta = v2sub(this.mousePos(ev), this.player.pos);
             this.player.aim = { x: -delta.x, y: -delta.y };
