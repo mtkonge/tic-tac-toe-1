@@ -2,4 +2,4 @@
 
 ## Kodestruktur
 
-## Opsætning
+Held og lykke
