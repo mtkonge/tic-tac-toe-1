@@ -3,7 +3,6 @@ type V2 = { x: number; y: number };
 type Circle = { pos: V2; radius: number };
 type Piece = Circle & { velocity: V2 };
 
-// deno-lint-ignore no-unused-vars
 function intersectsPoint(point: V2, circle: Circle): boolean {
     const dist = Math.sqrt(
         (point.x - circle.pos.x) ** 2 + (point.y - circle.pos.y) ** 2,
@@ -11,7 +10,6 @@ function intersectsPoint(point: V2, circle: Circle): boolean {
     return dist <= circle.radius;
 }
 
-// deno-lint-ignore no-unused-vars
 function intersectsCircle(a: Circle, b: Circle): boolean {
     const dist = Math.sqrt(
         (a.pos.x - b.pos.x) ** 2 + (a.pos.y - b.pos.y) ** 2,
@@ -68,6 +66,7 @@ class StateMasterControllerLogicHandlerBusiness {
         document.addEventListener("mouseup", () => this.shoot());
         document.addEventListener("mousedown", (ev) => {
             if (this.player === null) return;
+            if (!intersectsPoint(this.mousePos(ev), this.player)) return;
             const delta = v2sub(this.mousePos(ev), this.player.pos);
             this.player.aim = { x: -delta.x, y: -delta.y };
         });
