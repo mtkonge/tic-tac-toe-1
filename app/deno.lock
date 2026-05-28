@@ -2,7 +2,11 @@
   "version": "5",
   "specifiers": {
     "jsr:@luca/esbuild-deno-loader@~0.11.1": "0.11.1",
+<<<<<<< Updated upstream
     "jsr:@std/assert@*": "1.0.19",
+=======
+    "jsr:@std/assert@^1.0.19": "1.0.19",
+>>>>>>> Stashed changes
     "jsr:@std/bytes@^1.0.2": "1.0.6",
     "jsr:@std/cli@^1.0.30": "1.0.30",
     "jsr:@std/encoding@^1.0.10": "1.0.10",
@@ -245,6 +249,7 @@
   "workspace": {
     "dependencies": [
       "jsr:@luca/esbuild-deno-loader@~0.11.1",
+      "jsr:@std/assert@^1.0.19",
       "jsr:@std/http@^1.1.1",
       "npm:esbuild@0.20.2"
     ]
