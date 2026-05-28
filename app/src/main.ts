@@ -489,6 +489,7 @@ function main() {
             score,
             canvas,
         );
+        board.selectedSkin = skins[parseInt(skinSelect.value)];
     });
 }
 
