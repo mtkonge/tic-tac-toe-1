@@ -44,3 +44,34 @@ Deno.test("horizontal win condition", () => {
     const board = new TicTacToeBoard(grid);
     assertEquals(board.hasWon(), { playerWon: 1, tie: false });
 });
+
+Deno.test("tie condition", () => {
+    const grid: BoardPiece[][] = initGrid();
+
+    grid[1][1] = { player: 1 };
+    grid[2][2] = { player: 1 };
+    grid[3][3] = { player: 1 };
+    grid[4][1] = { player: 0 };
+    grid[4][2] = { player: 0 };
+    grid[4][3] = { player: 0 };
+    grid[0][1] = { player: 1 };
+    grid[1][0] = { player: 0 };
+
+    const board = new TicTacToeBoard(grid);
+    assertEquals(board.hasWon(), { playerWon: null, tie: true });
+});
+
+Deno.test("tie but win condition", () => {
+    const grid: BoardPiece[][] = initGrid();
+
+    grid[1][1] = { player: 1 };
+    grid[2][2] = { player: 1 };
+    grid[3][3] = { player: 1 };
+    grid[4][1] = { player: 0 };
+    grid[4][2] = { player: 0 };
+    grid[4][3] = { player: 0 };
+    grid[1][0] = { player: 0 };
+
+    const board = new TicTacToeBoard(grid);
+    assertEquals(board.hasWon(), { playerWon: 0, tie: false });
+});

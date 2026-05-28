@@ -25,10 +25,32 @@ export class TicTacToeBoard implements Board {
         return 1;
     }
 
+    private occupiedSpacesByEachPlayer(
+        gridSize: number,
+    ): { player0: number; player1: number } {
+        const result = {
+            player0: 0,
+            player1: 0,
+        };
+        for (let row = 0; row < gridSize; row++) {
+            for (let col = 0; col < gridSize; col++) {
+                if (this.grid[row][col].player === null) {
+                    continue;
+                }
+                if (this.grid[row][col].player === 0) {
+                    result.player0++;
+                    continue;
+                }
+                result.player1++;
+            }
+        }
+        return result;
+    }
+
     hasWon(): WinningResult {
         const size = 5;
         const winLength = 3;
-        let currentResult: WinningResult = { playerWon: null, tie: false };
+        let result: WinningResult = { playerWon: null, tie: false };
 
         const directions = [
             [0, 1],
@@ -51,7 +73,6 @@ export class TicTacToeBoard implements Board {
                             const r = row + dr * i;
                             const c = col + dc * i;
 
-                            // Bounds check
                             if (
                                 r >= 0 &&
                                 r < size &&
@@ -67,15 +88,29 @@ export class TicTacToeBoard implements Board {
 
                         if (count === winLength) {
                             if (
-                                currentResult.playerWon ===
+                                result.playerWon ===
                                     this.oppositePlayer(player)
                             ) {
+                                const totalCells = this
+                                    .occupiedSpacesByEachPlayer(size);
+                                if (totalCells.player0 > totalCells.player1) {
+                                    return {
+                                        playerWon: 0,
+                                        tie: false,
+                                    };
+                                }
+                                if (totalCells.player0 < totalCells.player1) {
+                                    return {
+                                        playerWon: 1,
+                                        tie: false,
+                                    };
+                                }
                                 return {
                                     playerWon: null,
                                     tie: true,
                                 };
                             }
-                            currentResult = {
+                            result = {
                                 playerWon: player,
                                 tie: false,
                             };
@@ -84,15 +119,6 @@ export class TicTacToeBoard implements Board {
                 }
             }
         }
-
-        // Check for tie (all cells filled)
-        const tie = this.grid.every((row) =>
-            row.every((cell) => cell.player !== null)
-        );
-
-        return {
-            playerWon: null,
-            tie,
-        };
+        return result;
     }
 }
