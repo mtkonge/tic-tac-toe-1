@@ -23,6 +23,7 @@ type Piece = PlayerCircle & { velocity: V2 };
 const skins = availableSkins();
 
 type Grid = {
+    offset: number;
     width: number;
     height: number;
     unit: number;
@@ -50,13 +51,16 @@ type LogicGridItem = {
 
 class StateMasterControllerLogicHandlerBusiness {
     private ctx: CanvasRenderingContext2D;
-    private grid: Grid = { unit: 80, width: 5, height: 5 };
-    private player: AimingPlayer | HasWonPlayer | HasShotPlayer;
+    private grid: Grid = { unit: 80, width: 5, height: 5, offset: 150 };
+    public player: AimingPlayer | HasWonPlayer | HasShotPlayer;
     private pieces: Piece[] = [];
 
     public selectedSkin = skins[0];
 
-    constructor(private canvas: HTMLCanvasElement) {
+    constructor(
+        private score: [number, number],
+        private canvas: HTMLCanvasElement,
+    ) {
         this.ctx = canvas.getContext("2d")!;
         this.player = this.createPlayer(0);
         this.ctx.lineWidth = 2;
@@ -102,12 +106,13 @@ class StateMasterControllerLogicHandlerBusiness {
     private buildLogicGrid(): LogicGrid {
         const gridX = (this.canvas.width - this.grid.width * this.grid.unit) /
             2;
+        const gridY = this.grid.offset;
         const grid: LogicGrid = [];
         for (let xIdx = 0; xIdx < this.grid.width; ++xIdx) {
             grid.push([]);
             for (let yIdx = 0; yIdx < this.grid.height; ++yIdx) {
                 const x = xIdx * this.grid.unit + gridX;
-                const y = yIdx * this.grid.unit + 24;
+                const y = yIdx * this.grid.unit + gridY;
                 const gridCenter = {
                     x: x + this.grid.unit / 2,
                     y: y + this.grid.unit / 2,
@@ -263,6 +268,11 @@ class StateMasterControllerLogicHandlerBusiness {
             Math.abs(p.velocity.x) + Math.abs(p.velocity.y) < 10
         );
         if (this.player.tag === "player_has_shot" && piecesStoppedMoving) {
+            for (const piece of this.pieces) {
+                piece.velocity.x = 0;
+                piece.velocity.y = 0;
+            }
+            this.hasPlayedSound.clear();
             this.playHitSound();
             this.swapPlayer();
             const logicGrid = this.buildLogicGrid();
@@ -301,11 +311,12 @@ class StateMasterControllerLogicHandlerBusiness {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         const gridX = (this.canvas.width - this.grid.width * this.grid.unit) /
             2;
+        const gridY = this.grid.offset;
         const logicGrid = this.buildLogicGrid();
         for (let xIdx = 0; xIdx < this.grid.width; ++xIdx) {
             for (let yIdx = 0; yIdx < this.grid.height; ++yIdx) {
                 const x = xIdx * this.grid.unit + gridX;
-                const y = yIdx * this.grid.unit + 24;
+                const y = yIdx * this.grid.unit + gridY;
 
                 const winner = logicGrid[xIdx][yIdx];
                 if (winner.tag === "occupied") {
@@ -358,23 +369,88 @@ class StateMasterControllerLogicHandlerBusiness {
         }
         if (this.player.tag === "player_has_won") {
             this.ctx.font = "32px monospace";
-            const winner = this.player.winner;
-            const loser: PlayerId = winner === 0 ? 1 : 0;
-            let text;
-            if (winner !== null) {
-                text =
-                    `Player #${winner} won! Most importantly, this means that player #${loser} lost!\nLoser.`;
-            } else {
-                text =
-                    `Tie! Most importantly, this means that you both lost!\nLosers.`;
+            {
+                const winner = this.player.winner;
+                const loser: PlayerId = winner === 0 ? 1 : 0;
+                let text;
+                let text2;
+                if (winner !== null) {
+                    text =
+                        `Player #${winner} won! Most importantly, this means that player #${loser} lost!`;
+                    text2 = "...Loser";
+                } else {
+                    text =
+                        `Tie! Most importantly, this means that you both lost!`;
+                    text2 = "...Losers";
+                }
+                {
+                    const textSize = this.ctx.measureText(
+                        text,
+                    );
+                    this.ctx.fillStyle = "#fff";
+                    this.ctx.fillRect(
+                        this.canvas.width / 2 - textSize.width / 2 - 12,
+                        200 - textSize.emHeightAscent - 12,
+                        textSize.width + 24,
+                        textSize.emHeightAscent + 24,
+                    );
+                    this.ctx.fillStyle = "#444";
+                    this.ctx.fillText(
+                        text,
+                        this.canvas.width / 2 - textSize.width / 2,
+                        200,
+                    );
+                }
+                {
+                    const textSize = this.ctx.measureText(
+                        text2,
+                    );
+                    this.ctx.fillStyle = "#fff";
+                    this.ctx.fillRect(
+                        this.canvas.width / 2 - textSize.width / 2 - 12,
+                        300 - textSize.emHeightAscent - 12,
+                        textSize.width + 24,
+                        textSize.emHeightAscent + 24,
+                    );
+                    this.ctx.fillStyle = "#444";
+                    this.ctx.fillText(
+                        text2,
+                        this.canvas.width / 2 - textSize.width / 2,
+                        300,
+                    );
+                }
             }
+
+            {
+                const text = "Press [space] to restart.";
+                const textSize = this.ctx.measureText(
+                    text,
+                );
+                this.ctx.fillStyle = "#fff";
+                this.ctx.fillRect(
+                    this.canvas.width / 2 - textSize.width / 2 - 12,
+                    500 - textSize.emHeightAscent - 12,
+                    textSize.width + 24,
+                    textSize.emHeightAscent + 24,
+                );
+                this.ctx.fillStyle = "#444";
+                this.ctx.fillText(
+                    text,
+                    this.canvas.width / 2 - textSize.width / 2,
+                    500,
+                );
+            }
+        }
+
+        {
+            const text = `${this.score[0]} | ${this.score[1]}`;
             const textSize = this.ctx.measureText(
                 text,
             );
             this.ctx.fillStyle = "#fff";
             this.ctx.fillRect(
                 this.canvas.width / 2 - textSize.width / 2 - 12,
-                200 - textSize.emHeightAscent - 12,
+                75 - textSize.emHeightAscent - 12,
                 textSize.width + 24,
                 textSize.emHeightAscent + 24,
             );
@@ -382,16 +458,17 @@ class StateMasterControllerLogicHandlerBusiness {
             this.ctx.fillText(
                 text,
                 this.canvas.width / 2 - textSize.width / 2,
-                200,
+                75,
             );
         }
     }
 }
 
 function main() {
+    const score = [0, 0] satisfies [number, number];
     const canvas = document.querySelector<HTMLCanvasElement>("#canvas")!;
 
-    const board = new StateMasterControllerLogicHandlerBusiness(canvas);
+    let board = new StateMasterControllerLogicHandlerBusiness(score, canvas);
 
     const skinSelect = document.querySelector<HTMLSelectElement>(
         "#skin-selection",
@@ -401,6 +478,18 @@ function main() {
         board.selectedSkin = skins[parseInt(skinSelect.value)];
     });
     board.selectedSkin = skins[parseInt(skinSelect.value)];
+
+    document.addEventListener("keydown", (ev: KeyboardEvent) => {
+        if (ev.key !== " ") return;
+        if (board.player.tag !== "player_has_won") return;
+        if (board.player.winner !== null) {
+            score[board.player.winner] += 1;
+        }
+        board = new StateMasterControllerLogicHandlerBusiness(
+            score,
+            canvas,
+        );
+    });
 }
 
 main();
