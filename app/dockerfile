@@ -1,0 +1,9 @@
+FROM denoland/deno:2.7.14
+
+WORKDIR /app
+
+COPY . .
+
+EXPOSE 8432
+
+CMD ["deno", "task", "dev"]
