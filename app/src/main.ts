@@ -32,6 +32,14 @@ function v2add(lhs: V2, rhs: V2) {
     return { x: lhs.x + rhs.x, y: lhs.y + rhs.y };
 }
 
+type LogicGrid = LogicGridItem[][];
+type LogicGridItem = {
+    tag: "occupied";
+    player: PlayerId;
+} | {
+    tag: "unoccupied";
+};
+
 class StateMasterControllerLogicHandlerBusiness {
     private ctx: CanvasRenderingContext2D;
     private grid: Grid = { unit: 80, width: 5, height: 5 };
@@ -78,6 +86,47 @@ class StateMasterControllerLogicHandlerBusiness {
             requestAnimationFrame(renderCb);
         };
         requestAnimationFrame(renderCb);
+    }
+
+    private buildLogicGrid(): LogicGrid {
+        const gridX = (this.canvas.width - this.grid.width * this.grid.unit) /
+            2;
+        const grid: LogicGrid = [];
+        for (let xIdx = 0; xIdx < this.grid.width; ++xIdx) {
+            grid.push([]);
+            for (let yIdx = 0; yIdx < this.grid.height; ++yIdx) {
+                const x = xIdx * this.grid.unit + gridX;
+                const y = yIdx * this.grid.unit + 24;
+                const gridCenter = {
+                    x: x + this.grid.unit / 2,
+                    y: y + this.grid.unit / 2,
+                };
+                const candidates = this.pieces
+                    .filter((p) => {
+                        return intersectsSquare(p.pos, {
+                            pos: { x, y },
+                            size: { x: this.grid.unit, y: this.grid.unit },
+                        });
+                    })
+                    .sort((lhs, rhs) =>
+                        pointDist(lhs.pos, gridCenter) -
+                        pointDist(rhs.pos, gridCenter)
+                    );
+
+                const winner = candidates.at(0);
+                if (winner !== undefined) {
+                    grid[xIdx].push({
+                        tag: "occupied",
+                        player: winner.player,
+                    });
+                } else {
+                    grid[xIdx].push({
+                        tag: "unoccupied",
+                    });
+                }
+            }
+        }
+        return grid;
     }
 
     private renderCircle(circle: PlayerCircle, ctx: CanvasRenderingContext2D) {
@@ -193,11 +242,14 @@ class StateMasterControllerLogicHandlerBusiness {
             Math.abs(p.velocity.x) + Math.abs(p.velocity.y) < 10
         );
         if (this.player.tag === "player_has_shot" && piecesStoppedMoving) {
+            this.playHitSound();
             this.swapPlayer();
+            const logicGrid = this.buildLogicGrid();
         }
         if (this.player.tag === "player_aiming") {
             this.player.timer -= deltaTime;
             if (this.player.timer < 0) {
+                this.playHitSound();
                 this.swapPlayer();
             }
         }

@@ -6,12 +6,15 @@ interface Skin {
 
 class RedBlueSkin implements Skin {
     render(square: PlayerSquare, ctx: CanvasRenderingContext2D) {
+        let text;
         switch (square.player) {
             case 0:
-                ctx.fillStyle = "red";
+                ctx.fillStyle = "#E87461";
+                text = "X";
                 break;
             case 1:
-                ctx.fillStyle = "blue";
+                text = "O";
+                ctx.fillStyle = "#6883BA";
                 break;
         }
         ctx.fillRect(
@@ -19,6 +22,17 @@ class RedBlueSkin implements Skin {
             square.pos.y,
             square.size.x,
             square.size.y,
+        );
+
+        ctx.font = "32px monospace";
+        ctx.fillStyle = "#fff";
+        const textSize = ctx.measureText(
+            text,
+        );
+        ctx.fillText(
+            text,
+            square.pos.x + square.size.x / 2 - textSize.width / 2,
+            square.pos.y + square.size.y / 2 + textSize.emHeightAscent / 2,
         );
     }
 }
