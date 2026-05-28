@@ -1,6 +1,7 @@
 import {
     AimingPlayer,
     HasShotPlayer,
+    HasWonPlayer,
     PlayerCircle,
     PlayerId,
     PlayerSquare,
@@ -43,7 +44,7 @@ type LogicGridItem = {
 class StateMasterControllerLogicHandlerBusiness {
     private ctx: CanvasRenderingContext2D;
     private grid: Grid = { unit: 80, width: 5, height: 5 };
-    private player: AimingPlayer | HasShotPlayer;
+    private player: AimingPlayer | HasWonPlayer | HasShotPlayer;
     private pieces: Piece[] = [];
 
     public selectedSkin = skins[0];
@@ -55,12 +56,15 @@ class StateMasterControllerLogicHandlerBusiness {
 
         document.addEventListener("mouseup", (ev) => {
             if (ev.button !== 0) return;
+            if (
+                this.player.tag !== "player_aiming" || this.player.aim === null
+            ) return;
             this.playHitSound();
             this.shoot();
         });
         document.addEventListener("mousedown", (ev) => {
             if (ev.button !== 0) return;
-            if (this.player.tag === "player_has_shot") return;
+            if (this.player.tag !== "player_aiming") return;
             if (!intersectsPoint(this.mousePos(ev), this.player)) return;
             const delta = v2sub(this.mousePos(ev), this.player.pos);
             this.player.aim = { x: -delta.x, y: -delta.y };
@@ -164,6 +168,9 @@ class StateMasterControllerLogicHandlerBusiness {
     }
 
     private swapPlayer() {
+        if (this.player.tag === "player_has_won") {
+            throw new Error("unreachable");
+        }
         const id = this.player.tag === "player_aiming"
             ? this.player.player
             : this.player.previousPlayer;
@@ -245,6 +252,10 @@ class StateMasterControllerLogicHandlerBusiness {
             this.playHitSound();
             this.swapPlayer();
             const logicGrid = this.buildLogicGrid();
+            logicGrid;
+            if (Math.random() < 0.1) {
+                this.player = { tag: "player_has_won", winner: 0 };
+            }
         }
         if (this.player.tag === "player_aiming") {
             this.player.timer -= deltaTime;
@@ -266,28 +277,14 @@ class StateMasterControllerLogicHandlerBusiness {
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         const gridX = (this.canvas.width - this.grid.width * this.grid.unit) /
             2;
+        const logicGrid = this.buildLogicGrid();
         for (let xIdx = 0; xIdx < this.grid.width; ++xIdx) {
             for (let yIdx = 0; yIdx < this.grid.height; ++yIdx) {
                 const x = xIdx * this.grid.unit + gridX;
                 const y = yIdx * this.grid.unit + 24;
-                const gridCenter = {
-                    x: x + this.grid.unit / 2,
-                    y: y + this.grid.unit / 2,
-                };
-                const candidates = this.pieces
-                    .filter((p) => {
-                        return intersectsSquare(p.pos, {
-                            pos: { x, y },
-                            size: { x: this.grid.unit, y: this.grid.unit },
-                        });
-                    })
-                    .sort((lhs, rhs) =>
-                        pointDist(lhs.pos, gridCenter) -
-                        pointDist(rhs.pos, gridCenter)
-                    );
 
-                const winner = candidates.at(0);
-                if (winner !== undefined) {
+                const winner = logicGrid[xIdx][yIdx];
+                if (winner.tag === "occupied") {
                     this.selectedSkin.render({
                         pos: { x, y },
                         size: { x: this.grid.unit, y: this.grid.unit },
@@ -333,6 +330,29 @@ class StateMasterControllerLogicHandlerBusiness {
                 this.player.timer.toFixed(2),
                 this.canvas.width / 2 - textSize.width / 2,
                 980,
+            );
+        }
+        if (this.player.tag === "player_has_won") {
+            this.ctx.font = "32px monospace";
+            const winner = this.player.winner;
+            const loser: PlayerId = winner === 0 ? 1 : 0;
+            const text =
+                `Player #${winner} won! Most importantly, this means that player #${loser} lost!\nLoser.`;
+            const textSize = this.ctx.measureText(
+                text,
+            );
+            this.ctx.fillStyle = "#fff";
+            this.ctx.fillRect(
+                this.canvas.width / 2 - textSize.width / 2 - 12,
+                200 - textSize.emHeightAscent - 12,
+                textSize.width + 24,
+                textSize.emHeightAscent + 24,
+            );
+            this.ctx.fillStyle = "#444";
+            this.ctx.fillText(
+                text,
+                this.canvas.width / 2 - textSize.width / 2,
+                200,
             );
         }
     }

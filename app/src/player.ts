@@ -13,5 +13,9 @@ export type HasShotPlayer = {
     tag: "player_has_shot";
     previousPlayer: PlayerId;
 };
+export type HasWonPlayer = {
+    tag: "player_has_won";
+    winner: PlayerId;
+};
 export type PlayerCircle = CircleUnit & { player: PlayerId };
 export type PlayerSquare = SquareUnit & { player: PlayerId };
