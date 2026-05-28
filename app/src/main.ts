@@ -40,29 +40,6 @@ class StateMasterControllerLogicHandlerBusiness {
 
     public selectedSkin = skins[0];
 
-    private renderCircle(circle: PlayerCircle, ctx: CanvasRenderingContext2D) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
-        ctx.clip();
-        const square = {
-            size: { x: circle.radius * 2, y: circle.radius * 2 },
-            pos: {
-                x: circle.pos.x - circle.radius,
-                y: circle.pos.y - circle.radius,
-            },
-            player: circle.player,
-        } satisfies PlayerSquare;
-        this.selectedSkin.render(square, ctx);
-        ctx.restore();
-        ctx.strokeStyle = "#444";
-        ctx.beginPath();
-        ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
-        ctx.stroke();
-    }
-
-    private buildGriddy() {}
-
     constructor(private canvas: HTMLCanvasElement) {
         this.ctx = canvas.getContext("2d")!;
         this.player = this.createPlayer(0);
@@ -100,6 +77,27 @@ class StateMasterControllerLogicHandlerBusiness {
             requestAnimationFrame(renderCb);
         };
         requestAnimationFrame(renderCb);
+    }
+
+    private renderCircle(circle: PlayerCircle, ctx: CanvasRenderingContext2D) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
+        ctx.clip();
+        const square = {
+            size: { x: circle.radius * 2, y: circle.radius * 2 },
+            pos: {
+                x: circle.pos.x - circle.radius,
+                y: circle.pos.y - circle.radius,
+            },
+            player: circle.player,
+        } satisfies PlayerSquare;
+        this.selectedSkin.render(square, ctx);
+        ctx.restore();
+        ctx.strokeStyle = "#444";
+        ctx.beginPath();
+        ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
+        ctx.stroke();
     }
 
     private mousePos({ clientX, clientY }: MouseEvent): V2 {
@@ -256,7 +254,16 @@ class StateMasterControllerLogicHandlerBusiness {
 function main() {
     const canvas = document.querySelector<HTMLCanvasElement>("#canvas")!;
 
-    new StateMasterControllerLogicHandlerBusiness(canvas);
+    const board = new StateMasterControllerLogicHandlerBusiness(canvas);
+
+    const skinSelect = document.querySelector<HTMLSelectElement>(
+        "#skin-selection",
+    )!;
+
+    skinSelect.addEventListener("input", () => {
+        board.selectedSkin = skins[parseInt(skinSelect.value)];
+    });
+    board.selectedSkin = skins[parseInt(skinSelect.value)];
 }
 
 main();

@@ -1,6 +1,7 @@
 body {
     margin: 0;
     background-color: #222;
+    font-family: system-ui;
 }
 
 #canvas {
@@ -8,4 +9,19 @@ body {
     margin: 0 auto;
     background-color: hotpink;
     height: 100vh;
+}
+
+#skins {
+    color-scheme: dark;
+    color: white;
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    background-color: #444;
+    padding: 1rem;
+    border-radius: 0.5rem;
+
+    p {
+        margin-top: 0;
+    }
 }
