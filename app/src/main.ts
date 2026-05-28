@@ -1,26 +1,40 @@
 type V2 = { x: number; y: number };
 
-type Circle = { pos: V2; radius: number };
+type Circle = { pos: V2; radius: number; skin: string };
 type Piece = Circle & { velocity: V2 };
 
-function intersectsPoint(point: V2, circle: Circle): boolean {
-    const dist = Math.sqrt(
-        (point.x - circle.pos.x) ** 2 + (point.y - circle.pos.y) ** 2,
+function pointDist(lhs: V2, rhs: V2): number {
+    return Math.sqrt(
+        (lhs.x - rhs.x) ** 2 + (lhs.y - rhs.y) ** 2,
     );
-    return dist <= circle.radius;
+}
+
+function intersectsPoint(point: V2, circle: Circle): boolean {
+    return pointDist(point, circle.pos) <= circle.radius;
+}
+
+function intersectsSquare(point: V2, square: { pos: V2; size: V2 }): boolean {
+    if (point.x < square.pos.x || point.x > square.pos.x + square.size.x) {
+        return false;
+    }
+    if (point.y < square.pos.y || point.y > square.pos.y + square.size.y) {
+        return false;
+    }
+    return true;
 }
 
 function intersectsCircle(a: Circle, b: Circle): boolean {
-    const dist = Math.sqrt(
-        (a.pos.x - b.pos.x) ** 2 + (a.pos.y - b.pos.y) ** 2,
-    );
-    return dist <= a.radius + b.radius;
+    return pointDist(a.pos, b.pos) <= a.radius + b.radius;
 }
 
 function renderCircle(circle: Circle, ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
     ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = "#444";
+    ctx.beginPath();
+    ctx.arc(circle.pos.x, circle.pos.y, circle.radius, 0, Math.PI * 2);
+    ctx.stroke();
 }
 
 function v2sub(lhs: V2, rhs: V2) {
@@ -33,8 +47,15 @@ function v2add(lhs: V2, rhs: V2) {
 
 type Player = Circle & { aim: V2 | null };
 
+type Grid = {
+    width: number;
+    height: number;
+    unit: number;
+};
+
 class StateMasterControllerLogicHandlerBusiness {
     private ctx: CanvasRenderingContext2D;
+    private grid: Grid = { unit: 80, width: 5, height: 5 };
     private player: Player | null;
     private pieces: Piece[] = [];
 
@@ -53,9 +74,10 @@ class StateMasterControllerLogicHandlerBusiness {
 
     private basePlayer(): Player {
         return {
-            pos: { x: this.canvas.width / 2, y: 800 },
+            pos: { x: this.canvas.width / 2, y: 850 },
             radius: 25,
             aim: null,
+            skin: "#77c",
         } satisfies Player;
     }
 
@@ -108,6 +130,7 @@ class StateMasterControllerLogicHandlerBusiness {
                 x: calc(this.player.aim.x),
                 y: calc(this.player.aim.y),
             },
+            skin: this.player.skin,
         } satisfies Piece;
         this.pieces.push(piece);
         this.player = null;
@@ -153,6 +176,52 @@ class StateMasterControllerLogicHandlerBusiness {
     private render() {
         this.ctx.fillStyle = "#ddd";
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        const gridX = (this.canvas.width - this.grid.width * this.grid.unit) /
+            2;
+        for (let xIdx = 0; xIdx < this.grid.width; ++xIdx) {
+            for (let yIdx = 0; yIdx < this.grid.height; ++yIdx) {
+                const x = xIdx * this.grid.unit + gridX;
+                const y = yIdx * this.grid.unit + 24;
+                const gridCenter = {
+                    x: x + this.grid.unit / 2,
+                    y: y + this.grid.unit / 2,
+                };
+                const candidates = this.pieces
+                    .filter((p) => {
+                        return intersectsSquare(p.pos, {
+                            pos: { x, y },
+                            size: { x: this.grid.unit, y: this.grid.unit },
+                        });
+                    })
+                    .sort((lhs, rhs) =>
+                        pointDist(lhs.pos, gridCenter) -
+                        pointDist(rhs.pos, gridCenter)
+                    );
+
+                const winner = candidates.at(0);
+                if (winner !== undefined) {
+                    this.ctx.fillStyle = winner.skin;
+                    this.ctx.fillRect(
+                        x,
+                        y,
+                        this.grid.unit,
+                        this.grid.unit,
+                    );
+                }
+
+                this.ctx.strokeStyle = "#444";
+                this.ctx.strokeRect(
+                    x,
+                    y,
+                    this.grid.unit,
+                    this.grid.unit,
+                );
+            }
+        }
+        for (const piece of this.pieces) {
+            this.ctx.fillStyle = piece.skin;
+            renderCircle(piece, this.ctx);
+        }
         if (this.player !== null) {
             if (this.player.aim !== null) {
                 this.ctx.strokeStyle = "red";
@@ -165,12 +234,8 @@ class StateMasterControllerLogicHandlerBusiness {
                 );
                 this.ctx.stroke();
             }
-            this.ctx.fillStyle = "#000";
+            this.ctx.fillStyle = this.player.skin;
             renderCircle(this.player, this.ctx);
-        }
-        for (const piece of this.pieces) {
-            this.ctx.fillStyle = "#000";
-            renderCircle(piece, this.ctx);
         }
     }
 }
